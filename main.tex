@@ -1,0 +1,315 @@
+\documentclass[12pt,letterpaper]{article}
+
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath} % Fuente tipo Times New Roman
+\usepackage{geometry}
+\geometry{margin=2.54cm}
+
+\usepackage{setspace}
+\doublespacing
+
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{enumitem}
+
+% Configuración APA 7
+\usepackage{ragged2e}
+\usepackage{indentfirst}
+\usepackage{fancyhdr}
+
+\setlength{\parindent}{1.27cm}
+\setlength{\parskip}{0pt}
+
+\AtBeginDocument{\RaggedRight}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+% Cada sección (\section) inicia en una hoja nueva
+\usepackage{titlesec}
+\newcommand{\sectionbreak}{\clearpage}
+
+% Formato de títulos (APA 7): nivel 1 centrado y en negrita, nivel 2 a la izquierda y en negrita
+\titleformat{\section}
+  {\centering\normalfont\normalsize\bfseries}
+  {\thesection.}{0.5em}{}
+
+\titleformat{\subsection}
+  {\normalfont\normalsize\bfseries}
+  {\thesubsection}{0.5em}{}
+
+% Nombre de la tabla de contenido (babel español usa "Índice" por defecto)
+\addto\captionsspanish{\renewcommand{\contentsname}{Tabla de contenido}}
+
+\newcommand{\curso}{Sistemas Operacionales}
+\newcommand{\universidad}{Politécnico Grancolombiano}
+\newcommand{\titulo}{Configuración de Nginx como balanceador de carga}
+\newcommand{\integrantes}{%
+Santiago Sandoval Rativa\\
+Diego Alberto Bravo Niño\\
+Gian Lara Gonzales\\
+Maria Alejandra Llanos Hernandez}
+\newcommand{\docente}{Edward Reyes Corredor}
+\newcommand{\fechaentrega}{23 de noviembre de 2026}
+
+% Marcador de posición para capturas: reemplazar por \includegraphics cuando reciban las imágenes.
+\newcommand{\evidencia}[1]{\begin{figure}[H]\centering\fbox{\parbox[c][5cm][c]{0.88\textwidth}{\centering\textbf{Evidencia pendiente:} #1\\[0.5em]Insertar aquí la captura correspondiente.}}\caption{#1}\end{figure}}
+
+
+\begin{document}
+
+% ====== PORTADA ======
+\begin{titlepage}
+\centering
+{\large\bfseries \titulo\par}
+\vspace{1.5cm}
+{\large Entrega previa 2 -- Semana 5\par}
+\vspace{2cm}
+{\large \integrantes\par}
+\vspace{0.5cm}
+{\large Tutor: \docente\par}
+\vfill
+{\large \universidad\par}
+\vspace{2cm}
+{\large Bogotá, Colombia\par}
+{\large \fechaentrega\par}
+\end{titlepage}
+
+% ====== TABLA DE CONTENIDO ======
+\begin{singlespace}
+\tableofcontents
+\end{singlespace}
+
+\section{Introducción}
+El balance de la carga es una técnica que se utiliza para poder distribuir las solicitudes o tareas entre varios servidores, esto con el fin de poder aprovechar los recursos que se tienen disponibles y así poder evitar que un único servidor concentre toda la demanda y poder contribuir a la disponibilidad de los servicios, cuando hablamos de un entorno web, esta distribución puede realizarse mediante un servidor intermediario que es el que recibe las solicitudes de los usuarios y los dirige a diferentes servicios de la aplicación 
+
+En esta practica se aborda la configuración de Nginx como el balanceador de carga dentro de un entorno que este compuesto por tres máquinas virtuales, una de ellas cumple con la función de recibir solicitudes y distribuirlas, mientras tanto las otras dos máquinas virtuales actúan como servidor Backend, esto nos va a permitir explorar la configuración de un servicio web y que la comunicación entre equipos y la verificación del funcionamiento.
+
+En este documento presentamos los conceptos relacionados en la aplicación del balance de carga, la infraestructura que usa y el procedimiento de configuración y las pruebas, los resultados y las evidencias se incorporaran a partir de la ejecución de este laboratorio
+
+
+\section{Marco teórico}
+\subsection{Servidor web}
+Un servidor web es un software que recibe las solicitudes de sus clientes, lo hace generalmente mediante protocolos HTTP o HTTPS y entrega los recursos y respuestas a la web, este también puede servir contenido estático o actuar como intermediario hacia las aplicaciones que general el contenido dinámico. 
+
+
+\subsection{Nginx}
+
+Nginx es un software de servidor web que también se puede utilizar como proxy inverso y como balanceador de carga, su configuración nos va a permitir recibir solicitudes de los clientes y así encaminarlas hacia uno o varios servidores de destino, en esta practica usaremos Nginx para centralizar el acceso de distribuir solicitudes entre dos servidores Backend.
+
+\subsection{Balanceo de carga}
+El balanceo de carga consiste en distribuir las solicitudes o trabajos entre varios servidores, de esta manera podemos ayudar a utilizar de mejor manera los recursos, reducir la concentración de solicitudes en un único servidor y poder mejorar la capacidad de atender el trafico recurrente. El comportamiento dependerá de la configuración, los servidores disponibles y las características de las solicitudes.
+
+\subsection{Proxy inverso}
+El proxy inverso recibe solicitudes en nombre de uno o mas servidores de destino, el cliente se comunica con la proxy y este reenvía su solicitud al servidor backend que corresponda, de esta manera el acceso a los servidores de aplicación puede centralizarse en una dirección de entrada.
+
+\subsection{Servidores backend}
+Los backend son los servidores que reciben y procesan las solicitudes reenviadas por el balanceador. En este laboratorio se contemplan dos servidores backend, alojados en máquinas virtuales independientes, que deberán ofrecer un servicio web accesible desde la máquina que ejecuta Nginx.
+
+\subsection{Distribución de solicitudes}
+En la configuración básica de Nginx, un grupo de servidores podrá definirse mediante la directiva UPSTREAM, Nginx podrá distribuir las solicitudes entre los servidores declarados usando el comportamiento predeterminado o los métodos configurados, la practica nos ayuda a verificar el encaminamiento hacia ambos backend mediante las solicitudes al servidor de entrada.
+
+
+\section{Objetivos}
+\subsection{Objetivo general}
+El objetivo dentro del laboratorio será configurar y comprobar Nginx como balanceador de carga para poder distribuir las solicitudes HTTP entre dos servidores backend dentro del entorno de maquinas virtuales.
+
+
+\subsection{Objetivos específicos}
+\begin{itemize}
+    \item Identificar la función de cada máquina virtual dentro de la arquitectura del laboratorio.
+    \item Instalar y comprobar el servicio Nginx en la máquina designada como balanceador.
+    \item Configurar un grupo de servidores backend y el mecanismo de proxy inverso.
+    \item Verificar la conectividad entre las máquinas virtuales y la respuesta del servicio web.
+    \item Realizar pruebas de acceso y, si se ejecutan, pruebas de carga; registrar y analizar sus resultados.
+\end{itemize}
+
+
+\section{Desarrollo de la práctica}
+\subsection{Descripción de la infraestructura}
+Este laboratorio se compone de tres maquinas virtuales conectadas a una red que nos permite una comunicación entre ellas, La primera máquina cumplirá la función de balanceador de carga con Nginx, las otras dos maquinas virtuales alojaras los servicios web backend, que estos serán los que recibirán las solicitudes enviadas por el balanceador.
+
+\begin{table}[H]
+\centering
+\caption{Roles de las máquinas virtuales}
+\begin{tabular}{>{\centering\arraybackslash}p{2.5cm} p{4cm} p{5cm}}
+\toprule
+\textbf{Máquina} & \textbf{Rol} & \textbf{Función}\\
+\midrule
+MAQUINA 1 & Balanceador & Recibe solicitudes HTTP y las distribuye mediante Nginx.\\
+MAQUINA 2 & Backend 1 & Atiende solicitudes web enviadas desde el balanceador.\\
+MAQUINA 3 & Backend 2 & Atiende solicitudes web enviadas desde el balanceador.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\evidencia{EVIDENCIA 1.}
+
+\subsection{Direccionamiento IP}
+Se registraran las direccion IP asignadas a las maquinas virtuales y se verificara que estas esten en una red que les permita la comunicacion entre ellas.
+
+
+\begin{table}[H]
+\centering
+\caption{Direccionamiento de las máquinas virtuales}
+\begin{tabular}{lll}
+\toprule
+\textbf{Máquina} & \textbf{Rol} & \textbf{Dirección IP}\\
+\midrule
+MAQUINA 1 & Nginx / balanceador & [IP real VM1]\\
+MAQUINA 2 & Backend 1 & [IP real VM2]\\
+MAQUINA 3 & Backend 2 & [IP real VM3]\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\evidencia{Captura de la configuración o comandos que muestran las IP de las máquinas.}
+
+\subsection{Verificación de conectividad}
+Antes de configurar el balanceo, se comprueba la conectividad desde MAQUINA 1 hacia los servidores backend. Para ello puede utilizarse el comando PING, reemplazando el destino por la dirección IP real de cada máquina.
+
+\begin{lstlisting}
+ping []
+ping []
+\end{lstlisting}
+
+\evidencia{Pruebas de ping desde VM1 hacia VM2 y VM3.}
+
+\subsection{Instalación de Nginx}
+En la máquina virtual designada como balanceador se actualiza el repositorio de paquetes y se instala Nginx. En Ubuntu Server, los comandos utilizados son:
+\begin{lstlisting}
+sudo apt update
+sudo apt install nginx -y
+\end{lstlisting}
+Posteriormente, se inicia el servicio y se habilita para que arranque automáticamente con el sistema:
+\begin{lstlisting}
+sudo systemctl start nginx
+sudo systemctl enable nginx
+sudo systemctl status nginx
+\end{lstlisting}
+La instalación y el estado del servicio se evidenciarán mediante capturas de pantalla.
+
+\evidencia{Instalación de Nginx y comprobación de que el servicio se encuentra activo.}
+
+\subsection{Preparación de los servidores backend}
+La MAQUINA 2 y MAQUINA 3 Deben tener un servicio web disponible y accesible desde MAQUINA 1, para poder falicitar la comprobacion visulas de la distribucion de solicitudes, se encomienda que cada backend entregue una pagina que se pueda identificar, se puede realizar una prueba con un texto diferente que nos ayude a identificar cual fue el servidor que nos respondio.
+
+\evidencia{Servicio web funcionando en VM2 (backend 1).}
+\evidencia{Servicio web funcionando en VM3 (backend 2).}
+
+\subsection{Configuración de Nginx como balanceador de carga}
+Nginx se configura para definir un grupo de servidores backend y reenviar las solicitudes recibidas hacia dicho grupo. En el archivo de configuración correspondiente se debe utilizar la dirección IP real de VM2 y VM3.
+
+\begin{lstlisting}
+upstream backend {
+    server IP_VM2;
+    server IP_VM3;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    location / {
+        proxy_pass http://backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+\end{lstlisting}
+En esta configuración, \texttt{upstream backend} identifica el grupo de servidores de destino. Las líneas \texttt{server} registran los backend, mientras que \texttt{proxy\_pass} indica que las solicitudes recibidas en la ubicación definida se enviarán al grupo \texttt{backend}. Las directivas \texttt{proxy\_set\_header} transmiten información de encabezados al servidor de destino.
+
+\textbf{Nota:} este fragmento es un ejemplo de referencia. Se debe documentar la configuración realmente utilizada por el grupo, con sus IP y ajustes finales.
+
+\evidencia{Archivo de configuración de Nginx mostrando el grupo upstream y el proxy hacia los backend.}
+
+\subsection{Validación y aplicación de la configuración}
+Después de editar el archivo de configuración, se verifica la sintaxis con el comando:
+\begin{lstlisting}
+sudo nginx -t
+\end{lstlisting}
+Si la prueba no presenta errores, se recarga el servicio para aplicar los cambios:
+\begin{lstlisting}
+sudo systemctl reload nginx
+\end{lstlisting}
+Se incluirá la evidencia de la validación y se explicará el resultado obtenido.
+\evidencia{Salida del comando nginx -t y recarga del servicio.}
+
+\subsection{Prueba de acceso al balanceador}
+Desde un equipo cliente se realizan solicitudes a la dirección IP de VM1, que es la máquina configurada como balanceador. Se puede utilizar un navegador o el comando \texttt{curl}. El resultado debe registrarse y verificarse para determinar si la respuesta proviene de los backend configurados.
+\begin{lstlisting}
+curl http://IP_VM1
+\end{lstlisting}
+Se recomienda repetir la solicitud varias veces y registrar qué servidor respondió, si las páginas de backend se diferencian. No se afirmará que la distribución fue exitosa hasta contar con evidencia de las respuestas.
+\evidencia{Acceso desde el cliente a la IP del balanceador y respuesta recibida.}
+
+\subsection{Pruebas de carga y rendimiento}
+La guía propone utilizar herramientas de prueba de carga, como Apache Benchmark (\texttt{ab}) o Siege, para generar solicitudes HTTP hacia el balanceador y observar su comportamiento bajo diferentes niveles de tráfico. Si el grupo ejecuta estas pruebas, se deben describir los escenarios, la herramienta, los parámetros utilizados y las métricas obtenidas. Si no se ejecutan, se debe indicar claramente esta limitación en el documento.
+
+\begin{table}[H]
+\centering
+\caption{Registro de pruebas de carga (completar con resultados reales)}
+\begin{tabular}{p{3cm}p{3cm}p{3cm}p{4cm}}
+\toprule
+\textbf{Escenario} & \textbf{Solicitudes} & \textbf{Concurrencia} & \textbf{Resultado / observaciones}\\
+\midrule
+Carga ligera & [Dato] & [Dato] & [Resultado medido]\\
+Carga media & [Dato] & [Dato] & [Resultado medido]\\
+Carga alta & [Dato] & [Dato] & [Resultado medido]\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Métricas de rendimiento (completar con datos medidos)}
+\begin{tabular}{p{5cm}p{4cm}p{4cm}}
+\toprule
+\textbf{Métrica} & \textbf{Valor} & \textbf{Observación}\\
+\midrule
+Tiempo promedio de respuesta & [Dato] & [Análisis]\\
+Solicitudes por segundo & [Dato] & [Análisis]\\
+Porcentaje de errores & [Dato] & [Análisis]\\
+Uso de CPU & [Dato] & [Análisis]\\
+Uso de memoria & [Dato] & [Análisis]\\
+\bottomrule
+\end{tabular}
+\end{table}
+\evidencia{Capturas de la herramienta de pruebas de carga y métricas obtenidas, si se realizaron.}
+
+\section{Resultados y análisis}
+En esta sección se consolidarán los resultados de la configuración y las verificaciones. Se debe describir si Nginx quedó instalado y activo, si la configuración fue aceptada, si VM1 logró comunicarse con VM2 y VM3 y si las solicitudes realizadas al balanceador fueron atendidas por los servidores backend.
+
+\subsection{Resultados de conectividad y configuración}
+[Completar con los resultados reales de la instalación, validación de configuración y pruebas de conectividad.]
+
+\subsection{Análisis de las pruebas de balanceo}
+[Explicar, con base en las respuestas observadas, cómo se distribuyeron las solicitudes entre los backend. Evitar afirmar una distribución uniforme si no se comprobó.]
+
+\subsection{Análisis de rendimiento}
+[Si se ejecutaron pruebas de carga, interpretar las métricas, comparar escenarios e identificar limitaciones o posibles cuellos de botella. Si no se ejecutaron, describir únicamente las verificaciones efectivamente realizadas.]
+
+
+\section{Conclusiones}
+[Redactar las conclusiones finales cuando estén disponibles las evidencias y resultados. Relacionar las conclusiones con los objetivos de la práctica, el funcionamiento de Nginx y las verificaciones realizadas.]
+
+
+\section{Bibliografía}
+\begin{itemize}
+    \item Nginx. (s. f.). \textit{NGINX documentation}. \url{https://nginx.org/en/docs/}
+    \item Nginx. (s. f.). \textit{Beginner's guide}. \url{https://nginx.org/en/docs/beginners_guide.html}
+    \item Ubuntu. (s. f.). \textit{Ubuntu Server documentation}. \url{https://ubuntu.com/server/docs}
+\end{itemize}
+
+
+\end{document}
